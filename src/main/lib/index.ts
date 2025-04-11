@@ -9,7 +9,7 @@ import path from 'path'
 import welcomeNoteFile from '../../../resources/welcomeNote.md?asset'
 
 export const getRootDir = () => {
-  return `${homedir()}/${appDirectoryName}`
+  return path.join(homedir(), appDirectoryName)
 }
 
 export const getNotes: GetNotes = async () => {
@@ -30,7 +30,7 @@ export const getNotes: GetNotes = async () => {
     const content = await readFile(welcomeNoteFile, { encoding: fileEncoding })
 
     // create the welcome note
-    await writeFile(`${rootDir}/${welcomeNoteFilename}`, content, { encoding: fileEncoding })
+    await writeFile(path.join(rootDir, welcomeNoteFilename), content, { encoding: fileEncoding })
 
     notes.push(welcomeNoteFilename)
   }
@@ -39,7 +39,7 @@ export const getNotes: GetNotes = async () => {
 }
 
 export const getNoteInfoFromFilename = async (filename: string): Promise<NoteInfo> => {
-  const fileStats = await stat(`${getRootDir()}/${filename}`)
+  const fileStats = await stat(path.join(getRootDir(), filename))
 
   return {
     title: filename.replace(/\.md$/, ''),
@@ -50,14 +50,14 @@ export const getNoteInfoFromFilename = async (filename: string): Promise<NoteInf
 export const readNote: ReadNote = async (filename) => {
   const rootDir = getRootDir()
 
-  return readFile(`${rootDir}/${filename}.md`, { encoding: fileEncoding })
+  return readFile(path.join(rootDir, `${filename}.md`), { encoding: fileEncoding })
 }
 
 export const writeNote: WriteNote = async (filename, content) => {
   const rootDir = getRootDir()
 
   console.info(`Writing note ${filename}`)
-  return writeFile(`${rootDir}/${filename}.md`, content, { encoding: fileEncoding })
+  return writeFile(path.join(rootDir, `${filename}.md`), content, { encoding: fileEncoding })
 }
 
 export const createNote: CreateNote = async () => {
@@ -67,10 +67,9 @@ export const createNote: CreateNote = async () => {
 
   const { filePath, canceled } = await dialog.showSaveDialog({
     title: 'New note',
-    defaultPath: `${rootDir}/Untitled.md`,
+    defaultPath: path.join(rootDir, 'Untitled.md'),
     buttonLabel: 'Create',
     properties: ['showOverwriteConfirmation'],
-    showsTagField: false,
     filters: [{ name: 'Markdown', extensions: ['md'] }]
   })
 
@@ -81,7 +80,12 @@ export const createNote: CreateNote = async () => {
 
   const { name: filename, dir: parentDir } = path.parse(filePath)
 
-  if (parentDir !== rootDir) {
+  // Convert both paths to absolute paths and normalize them
+  const absoluteParentDir = path.resolve(parentDir)
+  const absoluteRootDir = path.resolve(rootDir)
+
+  // Compare the normalized absolute paths
+  if (absoluteParentDir.toLowerCase() !== absoluteRootDir.toLowerCase()) {
     await dialog.showMessageBox({
       type: 'error',
       title: 'Creation failed',
@@ -95,7 +99,7 @@ export const createNote: CreateNote = async () => {
   console.info(`Creating note: ${filePath}`)
   await writeFile(filePath, '')
 
-  return filename
+  return filename.replace(/\.md$/, '')
 }
 
 export const deleteNote: DeleteNote = async (filename) => {
@@ -116,6 +120,6 @@ export const deleteNote: DeleteNote = async (filename) => {
   }
 
   console.info(`Deleting note: ${filename}`)
-  await remove(`${rootDir}/${filename}.md`)
+  await remove(path.join(rootDir, `${filename}.md`))
   return true
 }
